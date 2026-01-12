@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelScan AI | Pro OCR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        :root { 
+            --main-purple: #8b5cf6; 
+            --bg-dark: #0a0e27;
+            --card-bg: #1a1f3a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: linear-gradient(to top, #4c1d95 0%, var(--bg-dark) 40%, var(--bg-dark) 100%);
+            background-attachment: fixed;
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding-top: 80px;
+        }
+
+      #inner-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* السطر القادم هو السر: يجعله يغطي طول الصورة بالكامل مهما كانت طويلة */
+    height: 100%; 
+    min-height: 100%; 
+    
+    background: rgba(0, 0, 0, 0.7); 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50; /* تأكدي أن الرقم هنا أعلى من أي عنصر آخر داخل الإطار */
+    border-radius: 8px;
+    backdrop-filter: blur(3px);
+}
+
+        .custom-loader {
+            width: 50px;
+            height: 50px;
+            display: grid;
+            border: 4px solid #0000;
+            border-radius: 50%;
+            border-right-color: #2563eb; 
+            animation: rotate-loader 1s infinite linear;
+        }
+
+        .custom-loader::before,
+        .custom-loader::after {     
+            content: "";
+            grid-area: 1/1;
+            margin: 2px;
+            border: inherit;
+            border-radius: 50%;
+            animation: rotate-loader 2s infinite;
+        }
+
+        .custom-loader::after {
+            margin: 8px;
+            animation-duration: 3s;
+        }
+
+        @keyframes rotate-loader {
+            100% { transform: rotate(1turn); }
+        }
+
+        #inner-loader h3 {
+            margin-top: 15px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+        }
+
+        /* --- الإطار الوهمي --- */
+        .scan-window {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px auto;
+    width: 100%;
+    max-width: 400px;    /* هذا يمنع الصورة من أن تصبح عملاقة */
+    height: 350px;       /* حجم ثابت ومريح للعين قبل وبعد رفع الصورة */
+    background: transparent; 
+    border: none;        /* مسح النقاط الصغيرة نهائياً */
+    overflow: hidden;    /* لمنع خروج الصورة عن الإطار */
+}
+
+        .scan-window::before, .scan-window::after, 
+        .corners-bottom::before, .corners-bottom::after {
+            content: ""; position: absolute; width: 35px; height: 35px;
+            border-color: rgba(255, 255, 255, 0.9); border-style: solid;
+            pointer-events: none; z-index: 10;
+        }
+
+        .scan-window::before { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 15px; }
+        .scan-window::after { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 15px; }
+        .corners-bottom::before { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 15px; }
+        .corners-bottom::after { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 15px; }
+
+        #image-to-edit {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* تجعل الصورة تلتزم بالإطار الوهمي دون تشويه */
+    display: block;
+    border-radius: 8px; /* أبقينا الحواف الدائرية لجمالية الصورة */
+}
+        .hidden { display: none !important; }
+
+        .top-navbar { width: 100%; background: #8b5cf6; padding: 12px 0; position: fixed; top: 0; left: 0; z-index: 1000; display: flex; justify-content: center; }
+        .nav-container { width: 90%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; direction: ltr; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 1.2rem; color: white; direction: rtl; }
+        .navbar-links-group { display: flex; gap: 20px; align-items: center; direction: rtl; }
+        .navbar-links-group a { color: white; text-decoration: none; font-size: 0.95rem; }
+        
+        .main-container { text-align: center; width: 100%; max-width: 800px; margin: auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        .options-wrapper { display: flex; gap: 30px; margin-top: 50px; }
+        .icon-circle { width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--main-purple); display: flex; align-items: center; justify-content: center; font-size: 35px; background: rgba(139, 92, 246, 0.1); margin-bottom: 10px; cursor: pointer; transition: 0.3s; }
+        .icon-circle:hover { background: var(--main-purple); transform: translateY(-5px); }
+
+        .btn-main { background: var(--main-purple); color: white; border: none; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .controls-bar { margin-top: 40px; display: flex; gap: 15px; }
+        .control-btn { width: 55px; height: 55px; background: rgba(139, 92, 246, 0.2); border: 1px solid var(--main-purple); border-radius: 50%; color: white; cursor: pointer; }
+        
+        .btn-transparent { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(139, 92, 246, 0.5); padding: 10px 18px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(5px); }
+        footer { padding: 20px; opacity: 0.7; font-size: 13px; margin-top: auto; }
+    </style>
+</head>
+<body>
+
+    <nav class="top-navbar">
+        <div class="nav-container">
+            <div class="navbar-links-group">
+                <a href="#">الأدوات</a>
+                <a href="#" onclick="location.reload()">الرئيسية</a>
+            </div>
+            <div class="nav-brand">
+                <span>PixelScan AI</span>
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container" id="welcome-screen">
+        <h2 style="font-size: 2.5rem; margin-bottom: 10px;">PixelScan AI</h2>
+        <p style="color: #ccc;">استخرج النصوص من صورك بدقة عالية</p>
+        <div class="options-wrapper">
+            <div class="option-card" onclick="document.getElementById('fileInput').click()">
+                <div class="icon-circle"><i class="fa-solid fa-images"></i></div>
+                <span>المعرض</span>
+            </div>
+            <div class="option-card" onclick="document.getElementById('cameraInput').click()">
+                <div class="icon-circle"><i class="fa-solid fa-camera"></i></div>
+                <span>الكاميرا</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor-section" class="main-container hidden">
+        <h3 style="margin-bottom: 30px;">تعديل وتحديد النص</h3>
+        
+        <div class="scan-window">
+            <img id="image-to-edit" src=""> 
+            <span class="corners-bottom"></span> 
+            <div id="inner-loader" class="hidden">
+                <div class="custom-loader"></div>
+                <h3>جاري المعالجة...</h3>
+            </div>
+        </div>
+
+        <div class="controls-bar">
+            <button class="control-btn" onclick="cropper.rotate(-90)"><i class="fa-solid fa-rotate-left"></i></button>
+            <button class="control-btn" onclick="cropper.zoom(0.1)"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+            <button class="control-btn" onclick="cropper.zoom(-0.1)"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+            <button class="control-btn" onclick="cropper.rotate(90)"><i class="fa-solid fa-rotate-right"></i></button>
+        </div>
+
+        <button class="btn-main" onclick="startOCR()" style="width: 250px;">ابدأ المعالجة الآن</button>
+    </div>
+
+    <div id="result-section" class="main-container hidden">
+        <h3 style="margin-bottom: 20px;">النص المستخرج:</h3>
+        <textarea id="output-text" dir="auto" style="width:100%; height:250px; background: rgba(255, 255, 255, 0.05); color:white; border:1px solid var(--main-purple); border-radius:15px; padding:15px; unicode-bidi: plaintext;"></textarea>
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-top: 20px; gap: 10px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-transparent" onclick="copyText()"><i class="fa-solid fa-copy"></i> نسخ</button>
+                <button class="btn-transparent" onclick="downloadText()"><i class="fa-solid fa-download"></i> تحميل</button>
+            </div>
+            <button class="btn-main" onclick="location.reload()" style="margin-top: 0;">تحميل صورة أخرى</button>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" hidden onchange="handleImage(event)">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden onchange="handleImage(event)">
+
+    <footer>&copy; 2026 مستخرج النص من الصور</footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        let cropper;
+
+        function handleImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('welcome-screen').classList.add('hidden');
+                    document.getElementById('editor-section').classList.remove('hidden');
+                    const img = document.getElementById('image-to-edit');
+                    img.src = e.target.result;
+                    
+                    if(cropper) cropper.destroy();
+
+                    img.onload = function() {
+                        img.style.display = 'block';
+                        img.style.width = '100%';
+                        
+                        cropper = new Cropper(img, {
+    viewMode: 1,         // يمنع خروج الصورة والقص عن حدود الإطار
+    dragMode: 'move',
+    autoCropArea: 1,     // يجعل منطقة القص تأخذ كامل الصورة المتاحة داخل الإطار
+    background: false,
+    modal: false,
+    responsive: true,
+    ready: function () {
+        // لا نحتاج لتغيير الارتفاع هنا برمجياً لأننا ثبتناه في الـ CSS
+    }
+});
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function startOCR() {
+            const innerLoader = document.getElementById('inner-loader');
+            if(innerLoader) innerLoader.classList.remove('hidden');
+
+            const canvas = cropper.getCroppedCanvas();
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('image', blob, 'cropped_image.png');
+                try {
+                    const response = await fetch('/extract-text/', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if(innerLoader) innerLoader.classList.add('hidden');
+                    if (data && data.text) {
+                        const outputField = document.getElementById('output-text');
+                        outputField.value = data.text; // النص الصافي فقط
+                        document.getElementById('editor-section').classList.add('hidden');
+                        document.getElementById('result-section').classList.remove('hidden');
+                    } else { alert("حدث خطأ في المعالجة"); }
+                } catch (error) {
+                    if(innerLoader) innerLoader.classList.add('hidden');
+                    alert("خطأ في الاتصال");
+                }
+            }, 'image/png');
+        }
+
+        function copyText() {
+            const text = document.getElementById('output-text');
+            text.select();
+            navigator.clipboard.writeText(text.value);
+            alert("تم النسخ!");
+        }
+
+        function downloadText() {
+            const text = document.getElementById('output-text').value;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'text.txt';
+            a.click();
+        }
+    </script>
+</body>
+</html>
