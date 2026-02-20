@@ -8,11 +8,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-secret-key")
+SECRET_KEY = 'django-insecure-79e3)#n-0w!k@3uh1h-cvn!&+8i85(_wrg1=66u07csui^guch'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
@@ -87,6 +87,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # --- إعدادات مفتاح الذكاء الاصطناعي (Gemini API Key) ---
 # ضع مفتاحك الحقيقي هنا بين علامتي التنصيص
-GEMINI_API_KEY = os.environ.get("AIzaSyDG2BlpuA8QI9aApngOXBKdOe3pGQK7K9I, "")
+GEMINI_API_KEY = 'AIzaSyCh4m7rvrRCugksvl4hrpnxurnTgZuTLPY'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
